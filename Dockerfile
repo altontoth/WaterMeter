@@ -1,27 +1,25 @@
-FROM mpercival/resin-rtl-sdr
+FROM balenalib/raspberrypi3
 
 MAINTAINER Mark Percival
+# Credit to Frederik Granna for this base image
 
-RUN sudo apt-get update && apt-get install -y curl python && \
-    apt-get clean
 
-WORKDIR /usr/local
 
-RUN curl -O https://storage.googleapis.com/golang/go1.7.4.linux-armv6l.tar.gz && \
-    tar xvf go1.7.4.linux-armv6l.tar.gz
+RUN apt-get update && \
+    apt-get install -y libusb-1.0-0-dev pkg-config ca-certificates git-core cmake build-essential --no-install-recommends && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
 
-RUN mkdir /go
-ENV GOPATH /go
-ENV PATH /usr/local/go/bin:/go/bin:$PATH
+WORKDIR /tmp
 
-RUN go get github.com/bemasher/rtlamr
+RUN echo 'blacklist dvb_usb_rtl28xxu' > /etc/modprobe.d/raspi-blacklist.conf && \
+    git clone git://git.osmocom.org/rtl-sdr.git && \
+    mkdir rtl-sdr/build && \
+    cd rtl-sdr/build && \
+    cmake ../ -DINSTALL_UDEV_RULES=ON -DDETACH_KERNEL_DRIVER=ON && \
+    make && \
+    make install && \
+    ldconfig && \
+    rm -rf /tmp/rtl-sdr
 
-RUN mkdir /app
-WORKDIR /app
-
-COPY daemon.sh .
-COPY watchdog.sh .
-RUN chmod +x *.sh
-
-CMD ./daemon.sh
-
+WORKDIR /
